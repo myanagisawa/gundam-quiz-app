@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ガンダム パイロット当てクイズ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+        
+        .quiz-container {
+            display: none;
+        }
+        
+        .quiz-container.active {
+            display: block;
+        }
+        
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .mobile-suit {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffeb3b;
+            margin: 10px 0;
+        }
+        
+        .options {
+            display: grid;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .option {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+        
+        .option:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #ffeb3b;
+        }
+        
+        .option.selected {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        
+        .option.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        
+        .option.incorrect {
+            background: #f44336;
+            border-color: #f44336;
+        }
+        
+        .score {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        button {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: background 0.3s ease;
+        }
+        
+        button:hover {
+            background: #e68900;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .start-screen {
+            text-align: center;
+        }
+        
+        .start-screen p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .result-screen {
+            display: none;
+            text-align: center;
+        }
+        
+        .result-screen.active {
+            display: block;
+        }
+        
+        .final-score {
+            font-size: 48px;
+            color: #ffeb3b;
+            margin: 30px 0;
+        }
+        
+        .rating {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 ガンダム パイロット当てクイズ</h1>
+        
+        <div id="startScreen" class="start-screen">
+            <p>機動戦士ガンダムシリーズのモビルスーツとパイロットについてのクイズです。<br>
+            モビルスーツの名前から、そのパイロットを3択で選んでください。</p>
+            <button onclick="startQuiz()">クイズを開始</button>
+        </div>
+        
+        <div id="quizContainer" class="quiz-container">
+            <div class="score">
+                問題 <span id="currentQuestion">1</span> / <span id="totalQuestions">10</span> 
+                | スコア: <span id="score">0</span>点
+            </div>
+            
+            <div class="question">
+                <div>このモビルスーツのパイロットは誰でしょう？</div>
+                <div class="mobile-suit" id="mobileSuit"></div>
+            </div>
+            
+            <div class="options" id="options"></div>
+            
+            <div class="buttons">
+                <button id="nextButton" onclick="nextQuestion()" disabled>次の問題</button>
+            </div>
+        </div>
+        
+        <div id="resultScreen" class="result-screen">
+            <h2>クイズ終了！</h2>
+            <div class="final-score" id="finalScore"></div>
+            <div class="rating" id="rating"></div>
+            <button onclick="restartQuiz()">もう一度挑戦</button>
+        </div>
+    </div>
+
+    <script>
+        const gundamData = [
+            { mobileSuit: "RX-78-2 ガンダム", pilot: "アムロ・レイ", series: "機動戦士ガンダム" },
+            { mobileSuit: "MSZ-006 Ζガンダム", pilot: "カミーユ・ビダン", series: "機動戦士Ζガンダム" },
+            { mobileSuit: "MSZ-010 ΖΖガンダム", pilot: "ジュドー・アーシタ", series: "機動戦士ガンダムΖΖ" },
+            { mobileSuit: "RX-93 νガンダム", pilot: "アムロ・レイ", series: "機動戦士ガンダム 逆襲のシャア" },
+            { mobileSuit: "XXXG-01W ウイングガンダム", pilot: "ヒイロ・ユイ", series: "新機動戦記ガンダムW" },
+            { mobileSuit: "GF13-017NJ シャイニングガンダム", pilot: "ドモン・カッシュ", series: "機動武闘伝Gガンダム" },
+            { mobileSuit: "GX-9900 ガンダムX", pilot: "ガロード・ラン", series: "機動新世紀ガンダムX" },
+            { mobileSuit: "WD-M01 ∀ガンダム", pilot: "ロラン・セアック", series: "∀ガンダム" },
+            { mobileSuit: "ZGMF-X10A フリーダムガンダム", pilot: "キラ・ヤマト", series: "機動戦士ガンダムSEED" },
+            { mobileSuit: "ASW-G-08 ガンダムバルバトス", pilot: "三日月・オーガス", series: "機動戦士ガンダム 鉄血のオルフェンズ" },
+            { mobileSuit: "MS-06S シャア専用ザク", pilot: "シャア・アズナブル", series: "機動戦士ガンダム" },
+            { mobileSuit: "MSN-04 サザビー", pilot: "シャア・アズナブル", series: "機動戦士ガンダム 逆襲のシャア" },
+            { mobileSuit: "RX-0 ユニコーンガンダム", pilot: "バナージ・リンクス", series: "機動戦士ガンダムUC" },
+            { mobileSuit: "CB-001 1ガンダム", pilot: "刹那・F・セイエイ", series: "機動戦士ガンダム00" },
+            { mobileSuit: "AGE-1 ガンダムAGE-1", pilot: "フリット・アスノ", series: "機動戦士ガンダムAGE" },
+            { mobileSuit: "XXXG-01D ガンダムデスサイズ", pilot: "デュオ・マックスウェル", series: "新機動戦記ガンダムW" },
+            { mobileSuit: "XXXG-01H ガンダムヘビーアームズ", pilot: "トロワ・バートン", series: "新機動戦記ガンダムW" },
+            { mobileSuit: "XXXG-01S ガンダムサンドロック", pilot: "カトル・ラバーバ・ウィナー", series: "新機動戦記ガンダムW" },
+            { mobileSuit: "XXXG-01SR ガンダムサンドロック改", pilot: "カトル・ラバーバ・ウィナー", series: "新機動戦記ガンダムW" },
+            { mobileSuit: "OZ-00MS トールギス", pilot: "ゼクス・マーキス", series: "新機動戦記ガンダムW" }
+        ];
+
+        let currentQuizData = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedAnswer = null;
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function generateOptions(correctPilot) {
+            const allPilots = [...new Set(gundamData.map(data => data.pilot))];
+            const incorrectPilots = allPilots.filter(pilot => pilot !== correctPilot);
+            const shuffledIncorrect = shuffleArray(incorrectPilots);
+            const options = [correctPilot, ...shuffledIncorrect.slice(0, 2)];
+            return shuffleArray(options);
+        }
+
+        function startQuiz() {
+            currentQuizData = shuffleArray(gundamData).slice(0, 10);
+            currentQuestionIndex = 0;
+            score = 0;
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('quizContainer').classList.add('active');
+            document.getElementById('resultScreen').classList.remove('active');
+            
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const questionData = currentQuizData[currentQuestionIndex];
+            selectedAnswer = null;
+            
+            document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+            document.getElementById('totalQuestions').textContent = currentQuizData.length;
+            document.getElementById('score').textContent = score;
+            document.getElementById('mobileSuit').textContent = questionData.mobileSuit;
+            
+            const options = generateOptions(questionData.pilot);
+            const optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+            
+            options.forEach((option, index) => {
+                const button = document.createElement('div');
+                button.className = 'option';
+                button.textContent = option;
+                button.onclick = () => selectAnswer(option, questionData.pilot);
+                optionsContainer.appendChild(button);
+            });
+            
+            document.getElementById('nextButton').disabled = true;
+        }
+
+        function selectAnswer(selected, correct) {
+            if (selectedAnswer !== null) return;
+            
+            selectedAnswer = selected;
+            const options = document.querySelectorAll('.option');
+            
+            options.forEach(option => {
+                if (option.textContent === correct) {
+                    option.classList.add('correct');
+                } else if (option.textContent === selected && selected !== correct) {
+                    option.classList.add('incorrect');
+                }
+                option.style.cursor = 'default';
+                option.onclick = null;
+            });
+            
+            if (selected === correct) {
+                score += 10;
+                document.getElementById('score').textContent = score;
+            }
+            
+            document.getElementById('nextButton').disabled = false;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex >= currentQuizData.length) {
+                showResult();
+            } else {
+                showQuestion();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quizContainer').classList.remove('active');
+            document.getElementById('resultScreen').classList.add('active');
+            
+            const finalScore = score;
+            const maxScore = currentQuizData.length * 10;
+            const percentage = (finalScore / maxScore) * 100;
+            
+            document.getElementById('finalScore').textContent = `${finalScore}点 / ${maxScore}点`;
+            
+            let rating = '';
+            if (percentage >= 90) {
+                rating = '🏆 ニュータイプ級！完璧です！';
+            } else if (percentage >= 70) {
+                rating = '⭐ エース級！素晴らしい知識です！';
+            } else if (percentage >= 50) {
+                rating = '✨ 一般兵級！まずまずの成績です！';
+            } else {
+                rating = '📚 もう少し勉強が必要かも...頑張って！';
+            }
+            
+            document.getElementById('rating').textContent = rating;
+        }
+
+        function restartQuiz() {
+            document.getElementById('resultScreen').classList.remove('active');
+            document.getElementById('startScreen').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
